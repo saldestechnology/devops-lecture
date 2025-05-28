@@ -1,17 +1,20 @@
+// Vad är devops i form av
+// livscykelhantering av
+// programvara.
+
 const express = require('express');
 const helmet = require('helmet');
 const pino = require('pino');
 const pinoHttp = require('pino-http');
+const path = require("node:path");
 
-// --- Configuration ---
 const PORT = process.env.PORT || 8080;
 const LOG_LEVEL = process.env.LOG_LEVEL || 'info';
-const APP_VERSION = process.env.APP_VERSION || '0.0.0-local'; // Set via env var in deployment
+const APP_VERSION = process.env.APP_VERSION || '0.0.0-local';
 
-// --- Logger ---
 const logger = pino({
   level: LOG_LEVEL,
-  ...(process.env.NODE_ENV !== 'production' && { // Pretty print for local dev if NODE_ENV is not 'production'
+  ...(process.env.NODE_ENV !== 'production' && {
     transport: {
       target: 'pino-pretty',
       options: {
@@ -23,17 +26,37 @@ const logger = pino({
   }),
 });
 
-// --- Express App Setup ---
 const app = express();
 
-// --- Middlewares ---
-app.use(helmet()); // Basic security headers
-app.use(pinoHttp({ logger })); // Structured request logging
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: [
+        "'self'",
+        "https://cdn.tailwindcss.com",
+        "https://cdn.jsdelivr.net",
+        "'unsafe-inline'"
+      ],
+      styleSrc: [
+        "'self'",
+        "'unsafe-inline'"
+      ],
+      imgSrc: ["'self'", "data:"],
+      connectSrc: ["'self'"],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  })
+);
 
-// --- Routes ---
+app.use(pinoHttp({ logger }));
+app.use(pinoHttp({ logger }));
+
 app.get('/', (req, res) => {
   req.log.info({ action: 'render-homepage', app_version: APP_VERSION }, 'Homepage accessed');
-  res.send(`Hello DevOps World! App Version: ${APP_VERSION}. Deployed on Google Cloud Run! 🚀`);
+  res.sendFile(path.resolve("static", "index.html"))
 });
 
 app.get('/health', (req, res) => {
@@ -50,33 +73,28 @@ app.get('/error-test', (req, res, next) => {
   }
 });
 
-// --- Error Handling Middleware (Keep as last middleware) ---
-// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   req.log.error({ err: err }, 'Unhandled error caught by middleware');
   res.status(500).send({ message: 'Something broke unexpectedly!', error: err.message });
 });
 
-// --- Server Start ---
 const server = app.listen(PORT, () => {
   logger.info(`Server listening on port ${PORT}. Version: ${APP_VERSION}. NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 });
 
-// --- Graceful Shutdown ---
 const gracefulShutdown = (signal) => {
   logger.warn(`Received ${signal}. Shutting down gracefully...`);
   server.close(() => {
     logger.info('Server closed. Exiting process.');
-    // Add any cleanup here (e.g., close database connections)
+
     process.exit(0);
   });
 
-  // Force shutdown if server hasn't closed in time
   setTimeout(() => {
     logger.error('Could not close connections in time, forcefully shutting down');
     process.exit(1);
-  }, 10000); // 10 seconds timeout
+  }, 10000);
 };
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM')); // Sent by Cloud Run, Kubernetes
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));   // Ctrl+C in terminal
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));   
