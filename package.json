@@ -1,0 +1,30 @@
+{
+  "name": "my-devops-app",
+  "version": "1.1.0",
+  "description": "A Node.js app with DevOps best practices for GCP deployment",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "NODE_ENV=development node src/server.js",
+    "lint": "eslint .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "nodejs",
+    "express",
+    "docker",
+    "gcp",
+    "cloud-run",
+    "devops"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "pino-http": "^10.4.0"
+  },
+  "devDependencies": {
+    "pino-pretty": "^13.0.0"
+  }
+}
