@@ -72,4 +72,3 @@ jobs:
       - name: Show Cloud Run Service URL
         if: steps.deploy.outputs.url
         run: echo "Service URL: ${{ steps.deploy.outputs.url }}"
-        
