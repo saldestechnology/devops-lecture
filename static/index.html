@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="sv">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy"
+    content="script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net 'unsafe-inline'; style-src 'self' 'unsafe-inline';">
+  <title>DevOps-Resan: En Utvecklares Perspektiv</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* Custom scrollbar for webkit browsers */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #888;
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #555;
+    }
+
+    .nav-item {
+      cursor: pointer;
+      padding: 0.75rem 1rem;
+      border-radius: 0.375rem;
+      transition: background-color 0.3s ease, color 0.3s ease;
+      font-weight: 500;
+    }
+
+    .nav-item.active {
+      background-color: #0369a1;
+      /* sky-700 */
+      color: white;
+    }
+
+    .nav-item:not(.active):hover {
+      background-color: #e5e7eb;
+      /* gray-200 */
+    }
+
+    .content-section {
+      display: none;
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .content-section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      background-color: white;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+
+    .sub-nav-button {
+      background-color: #f3f4f6;
+      /* gray-100 */
+      color: #1f2937;
+      /* gray-800 */
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      font-weight: 500;
+      transition: background-color 0.2s ease;
+    }
+
+    .sub-nav-button.active {
+      background-color: #0ea5e9;
+      /* sky-500 */
+      color: white;
+    }
+
+    .sub-nav-button:hover:not(.active) {
+      background-color: #e5e7eb;
+      /* gray-200 */
+    }
+
+    .diagram-box {
+      border: 2px solid #9ca3af;
+      /* gray-400 */
+      padding: 0.75rem;
+      border-radius: 0.375rem;
+      text-align: center;
+      background-color: #f9fafb;
+      /* gray-50 */
+    }
+
+    .diagram-arrow {
+      font-size: 1.5rem;
+      color: #6b7280;
+      /* gray-500 */
+      margin: 0 0.5rem;
+      display: flex;
+      align-items: center;
+    }
+
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+
+    .tooltip .tooltiptext {
+      visibility: hidden;
+      width: 200px;
+      background-color: #374151;
+      /* gray-700 */
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px 0;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -100px;
+      opacity: 0;
+      transition: opacity 0.3s;
+      font-size: 0.875rem;
+    }
+
+    .tooltip:hover .tooltiptext {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    /* Chart container specific styling */
+    .chart-container {
+      position: relative;
+      /* Essential for Chart.js responsiveness and tooltips */
+      width: 100%;
+      max-width: 600px;
+      /* Example max-width, Tailwind: max-w-2xl */
+      margin-left: auto;
+      margin-right: auto;
+      height: 300px;
+      /* Base height, Tailwind: h-72 */
+      max-height: 400px;
+      /* Tailwind: max-h-96 */
+    }
+
+    @media (min-width: 768px) {
+
+      /* md breakpoint */
+      .chart-container {
+        height: 350px;
+        /* Tailwind: md:h-80 or md:h-96 for more height */
+      }
+    }
+  </style>
+</head>
+
+<body class="bg-stone-100 text-neutral-800 font-sans antialiased">
+  <!-- Visualization & Content Choices:
+        - Section 1 (Intro): Text, clickable challenges. Goal: Introduce, empathize. Method: HTML/JS.
+        - Section 2 (Tools):
+            - Git: Visual flow diagram. Goal: Illustrate branching. Method: HTML/CSS/Tailwind. Interaction: Visual representation.
+            - CI/CD: Conceptual pipeline diagram. Goal: Show process. Method: HTML/CSS/Tailwind.
+            - Docker: Info blocks. Goal: Explain benefits. Method: HTML.
+            - Env Vars: Best practice list. Goal: Inform. Method: HTML.
+        - Section 3 (Prod & Beyond):
+            - Monitoring: Mock metric display using Chart.js. Goal: Illustrate concept. Method: Chart.js/Canvas. Data is illustrative.
+            - Logging: Good/bad examples. Goal: Practical advice. Method: HTML.
+            - Reality: Textual discussion. Goal: Engage with concept. Method: HTML.
+        - Section 4 (Learning): Clickable areas for further study. Goal: Guide further study. Method: HTML/JS.
+        All choices prioritize clarity for qualitative/experiential content from the presentation outline, using interactive HTML/CSS/JS and one illustrative Chart.js chart. NO SVG/Mermaid. -->
+  <header class="bg-neutral-800 text-white shadow-lg sticky top-0 z-50">
+    <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-16">
+        <h1 class="text-2xl font-bold text-sky-400">DevOps-Resan: En Utvecklares Perspektiv</h1>
+        <nav class="hidden md:flex space-x-1" id="desktop-nav">
+          <button data-section="intro" class="nav-item active">Introduktion</button>
+          <button data-section="tools" class="nav-item">Verktyg & Flöden</button>
+          <button data-section="live" class="nav-item">Kod till Prod</button>
+          <button data-section="learning" class="nav-item">Lärande</button>
+        </nav>
+        <div class="md:hidden">
+          <button id="mobile-menu-button" class="text-gray-300 hover:text-white focus:outline-none">
+            <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16m-7 6h7" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="mobile-menu" class="md:hidden hidden bg-neutral-700">
+      <nav class="px-2 pt-2 pb-3 space-y-1 sm:px-3" id="mobile-nav">
+        <button data-section="intro" class="nav-item block w-full text-left active">Introduktion</button>
+        <button data-section="tools" class="nav-item block w-full text-left">Verktyg & Flöden</button>
+        <button data-section="live" class="nav-item block w-full text-left">Kod till Prod</button>
+        <button data-section="learning" class="nav-item block w-full text-left">Lärande</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="container mx-auto p-4 sm:p-6 lg:p-8">
+    <section id="intro" class="content-section active">
+      <h2 class="text-3xl font-semibold text-sky-700 mb-6">Introduktion & Grunden</h2>
+      <p class="mb-6 text-lg text-neutral-700">Välkommen! Denna sektion utforskar DevOps ur en utvecklares vardag. Vi
+        tittar på personliga resor, vanliga utmaningar och hur ett DevOps-tänk kan transformera både arbetssätt och
+        kodkvalitet. Det handlar om kultur, principer och en ny syn på mjukvaruutveckling.</p>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div class="card">
+          <h3 class="text-xl font-semibold text-sky-600 mb-3">Min Resa & "Aha!"-Upplevelser</h3>
+          <p class="text-neutral-600 mb-2">Från att primärt vara programmerare till att arbeta i team som anammar
+            DevOps-principer är en resa fylld av insikter. Det handlar om att se bortom den egna kodraden och förstå
+            hela livscykeln.</p>
+          <p class="text-neutral-600">Den verkliga "aha!"-upplevelsen kommer ofta när man ser värdet av automatisering
+            och hur snabb feedback kan förbättra både produkten och arbetsglädjen.</p>
+        </div>
+        <div class="card">
+          <h3 class="text-xl font-semibold text-sky-600 mb-3">Vanliga Utmaningar (Känner du igen dig?)</h3>
+          <ul class="list-disc list-inside text-neutral-600 space-y-1">
+            <li>"Men det fungerar ju på min maskin!" – den eviga klassikern.</li>
+            <li>Långa, smärtsamma och riskfyllda releaser.</li>
+            <li>Silos: "Vi kodar, de driftar, någon annan testar."</li>
+            <li>Svårigheter att få snabb och meningsfull feedback på det man byggt.</li>
+            <li>Ständig brandsläckning istället för proaktivt förbättringsarbete.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card mb-8">
+        <h3 class="text-xl font-semibold text-sky-600 mb-3">Hur DevOps-tänket Förändrar Arbetssättet</h3>
+        <p class="text-neutral-600 mb-2">Insikten att kvalitet och leverans är ett <strong
+            class="text-amber-600">gemensamt ansvar</strong> är fundamental. Värdet av <strong
+            class="text-amber-600">automatisering</strong> för att minska repetitiva och felbenägna uppgifter kan inte
+          nog understrykas. Det frigör tid till det vi utvecklare älskar – att lösa problem och skapa värde.</p>
+      </div>
+
+      <div class="card">
+        <h3 class="text-2xl font-semibold text-sky-600 mb-4">Kultur & Principer i Min Kodarvardag</h3>
+        <div class="space-y-4">
+          <div>
+            <h4 class="text-lg font-medium text-sky-500">Kulturförändring Först och Främst</h4>
+            <p class="text-neutral-600 ml-4">Samarbete över teamgränser, delat ansvar för hela produkten (inte bara
+              koden), och transparens kring både framgångar och problem är grundpelare.</p>
+          </div>
+          <div>
+            <h4 class="text-lg font-medium text-sky-500">Principer som Påverkar Hur Jag Skriver Kod</h4>
+            <ul class="list-disc list-inside text-neutral-600 ml-4 space-y-1">
+              <li><strong class="text-amber-600">Automatisering:</strong> Alltid tänka på hur koden kan byggas, testas
+                och driftsättas automatiskt.</li>
+              <li><strong class="text-amber-600">Snabb Feedback:</strong> Designa för att snabbt kunna se ändringar och
+                iterera.</li>
+              <li><strong class="text-amber-600">Kontinuerligt Lärande:</strong> Vara nyfiken och anpassa sig till nya
+                verktyg och metoder.</li>
+            </ul>
+            <p class="text-neutral-700 mt-3 ml-4">Som utvecklare uppskattar jag personligen kraften i `bash`, `pipes`
+              och att sätta upp `alias` för att effektivisera min lokala utvecklingsmiljö. Det är en form av
+              mikro-automatisering som kompletterar de större DevOps-flödena.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tools" class="content-section">
+      <h2 class="text-3xl font-semibold text-sky-700 mb-6">Kärnverktyg & Flöden</h2>
+      <p class="mb-6 text-lg text-neutral-700">Här utforskar vi några av de centrala verktygen och arbetsflödena som är
+        avgörande i en DevOps-kontext. Från versionshantering med Git till automatiserade CI/CD-pipelines, containrar
+        med Docker och säker hantering av miljövariabler – dessa komponenter förändrar hur vi utvecklar och levererar
+        mjukvara.</p>
+
+      <div class="mb-6 flex flex-wrap gap-2" id="tools-sub-nav">
+        <button data-subtarget="git" class="sub-nav-button active">Git & Branchar</button>
+        <button data-subtarget="cicd" class="sub-nav-button">CI/CD</button>
+        <button data-subtarget="containers" class="sub-nav-button">Containrar</button>
+        <button data-subtarget="envvars" class="sub-nav-button">Miljövariabler</button>
+      </div>
+
+      <div class="space-y-8">
+        <div id="git-sub" class="tools-sub-content active">
+          <div class="card">
+            <h3 class="text-2xl font-semibold text-sky-600 mb-4">Git & Branchar: Mer än bara spara kod</h3>
+            <p class="text-neutral-600 mb-3">Min erfarenhet av Git-flöden involverar ofta en modell där utveckling sker
+              i feature- eller fix-branchar, som sedan mergas till en `develop`-branch för staging och slutligen till
+              `main` för produktion. Detta ger en tydlig koppling mellan branch och miljö.</p>
+            <div class="mb-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+              <h4 class="font-medium text-neutral-700 mb-2">Exempel Git-flöde:</h4>
+              <div class="flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-2">
+                <div class="diagram-box w-full sm:w-auto"><code>feature/fix/...</code></div>
+                <div class="diagram-arrow">➔</div>
+                <div class="diagram-box w-full sm:w-auto"><code>develop</code> (Staging)</div>
+                <div class="diagram-arrow">➔</div>
+                <div class="diagram-box w-full sm:w-auto bg-sky-100 border-sky-400"><code>main</code> (Produktion)</div>
+              </div>
+            </div>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Vikten av bra commit-meddelanden</h4>
+            <p class="text-neutral-600 mb-1">Använder ofta format som `feat: Lägg till ny funktion` eller `fix: Rätta
+              bugg`. Detta skapar en tydlig historik och kan användas för automatisk generering av release notes
+              (Conventional Commits).</p>
+            <pre
+              class="bg-gray-800 text-white p-3 rounded-md text-sm overflow-x-auto"><code>feat: Lägg till ny inloggningsfunktion för användare</code></pre>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Code Reviews</h4>
+            <p class="text-neutral-600">En kritisk del för kunskapsdelning och tidig kvalitetssäkring ("shift left").
+            </p>
+          </div>
+        </div>
+
+        <div id="cicd-sub" class="tools-sub-content hidden">
+          <div class="card">
+            <h3 class="text-2xl font-semibold text-sky-600 mb-4">CI/CD: Magi när jag pushar!</h3>
+            <p class="text-neutral-600 mb-3">Continuous Integration (CI) innebär att kod automatiskt byggs och testas
+              vid varje push. Continuous Delivery/Deployment (CD) tar det vidare genom att automatiskt driftsätta
+              godkänd kod till staging eller produktion.</p>
+            <div class="mb-4 p-4 border border-gray-300 rounded-lg bg-gray-50">
+              <h4 class="font-medium text-neutral-700 mb-2">Konceptuell CI/CD Pipeline:</h4>
+              <div class="flex flex-col sm:flex-row items-stretch space-y-2 sm:space-y-0 sm:space-x-1 text-sm">
+                <div class="diagram-box flex-1">Push till Git</div>
+                <div class="diagram-arrow self-center">➔</div>
+                <div class="diagram-box flex-1">CI Server (Bygg)</div>
+                <div class="diagram-arrow self-center">➔</div>
+                <div class="diagram-box flex-1">Autom. Tester</div>
+                <div class="diagram-arrow self-center">➔</div>
+                <div class="diagram-box flex-1">Deploy Staging</div>
+                <div class="diagram-arrow self-center">➔</div>
+                <div class="diagram-box flex-1 bg-sky-100 border-sky-400">Deploy Produktion</div>
+              </div>
+            </div>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Min erfarenhet med GitHub Actions (konceptuellt)</h4>
+            <p class="text-neutral-600 mb-1">YAML-filer definierar arbetsflöden. Kan ses som recept/skript som körs vid
+              händelser (t.ex. push). Definierar `jobs` (bygg, test, deploy) och `steps`. Många `run`-steg är rena
+              `bash`-kommandon.</p>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Påverkan på mitt arbete</h4>
+            <ul class="list-disc list-inside text-neutral-600 space-y-1">
+              <li>Snabbare iterationer och live-feedback.</li>
+              <li>Minskad risk med mindre, frekventa releaser.</li>
+              <li>Ökad trygghet i deploy-processen.</li>
+              <li>Mer fokus på kodning, mindre på manuella steg.</li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="containers-sub" class="tools-sub-content hidden">
+          <div class="card">
+            <h3 class="text-2xl font-semibold text-sky-600 mb-4">Containrar (Docker): "Det funkar ju överallt!"</h3>
+            <p class="text-neutral-600 mb-3">Docker löser "men det fungerar ju på min maskin!" genom att skapa samma
+              miljö för utveckling, test och produktion.</p>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Hur jag använt Docker som utvecklare</h4>
+            <ul class="list-disc list-inside text-neutral-600 space-y-1">
+              <li>Köra databaser och andra beroenden lokalt i containrar.</li>
+              <li>Definiera utvecklingsmiljön med `docker-compose.yml`.</li>
+              <li>Bygga applikationen till en Docker-image i CI-pipelinen.</li>
+            </ul>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Min erfarenhet med Docker Swarm (kort)</h4>
+            <p class="text-neutral-600">Ett sätt att hantera flera Docker-containrar över flera maskiner, ofta enklare
+              att starta med än Kubernetes för vissa scenarion.</p>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Kubernetes (K8s) – Nästa nivå</h4>
+            <p class="text-neutral-600">Jag har satt upp det med manual, men är ingen expert på daglig drift. K8s är
+              standard för storskalig hantering, self-healing och avancerad skalning. Som utvecklare behöver jag förstå
+              hur min Docker-image körs och konfigureras i K8s.</p>
+          </div>
+        </div>
+
+        <div id="envvars-sub" class="tools-sub-content hidden">
+          <div class="card">
+            <h3 class="text-2xl font-semibold text-sky-600 mb-4">Miljövariabler & Secrets: Håll hemligheterna säkra</h3>
+            <p class="text-red-600 font-semibold mb-3">ALDRIG hårdkoda API-nycklar, databaslösenord etc. i koden!</p>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Min praxis</h4>
+            <ul class="list-disc list-inside text-neutral-600 space-y-1">
+              <li>`.env`-filer för lokal utveckling (alltid i `.gitignore`!).</li>
+              <li>Använda `export MIN_VARIABEL="värde"` i min lokala shell för t.ex. Google Cloud-konfigurationer.</li>
+              <li>Tydlig åtskillnad mellan frontend- och backend-variabler.</li>
+              <li>Använda plattformens sätt att injicera variabler i CI/CD och drift (Docker, K8s Secrets,
+                molntjänster).</li>
+            </ul>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Verktyg jag känner till</h4>
+            <p class="text-neutral-600">HashiCorp Vault, Azure Key Vault, AWS Secrets Manager etc. för centraliserad och
+              säker hantering.</p>
+            <h4 class="text-lg font-medium text-sky-500 mt-4 mb-2">Docker & Secrets</h4>
+            <p class="text-neutral-600">Miljövariabler kan injiceras när en container startar. Docker Swarm har också
+              inbyggd hantering för "secrets".</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="live" class="content-section">
+      <h2 class="text-3xl font-semibold text-sky-700 mb-6">Från Kod till Produktion & Bortom</h2>
+      <p class="mb-6 text-lg text-neutral-700">När koden är skriven börjar en ny fas. Här tittar vi på vikten av
+        övervakning och loggning för att förstå hur vår kod beter sig "live". Vi diskuterar också den ständiga
+        balansgången i verklighetens DevOps – att leverera värde snabbt kontra att sträva efter teknisk perfektion.</p>
+
+      <div class="grid md:grid-cols-2 gap-6 mb-8">
+        <div class="card">
+          <h3 class="text-xl font-semibold text-sky-600 mb-3">Övervakning & Loggning: Din Kod Live</h3>
+          <p class="text-neutral-600 mb-2">Varför bry sig som utvecklare? För att förstå verkligt beteende, felsöka
+            effektivt och fatta datadrivna beslut.</p>
+
+          <h4 class="text-lg font-medium text-sky-500 mt-3 mb-1">Min erfarenhet med Grafana</h4>
+          <p class="text-neutral-600 mb-3">Visualisera nyckeltal (CPU, minne, svarstider, fel). Använt det för att se
+            samband mellan system-spikar och händelser, för att veta var man ska gräva i loggar/kod, och förstå
+            användarmönster.</p>
+
+          <div class="chart-container my-4">
+            <canvas id="metricsChart"></canvas>
+          </div>
+          <p class="text-xs text-center text-neutral-500">Exempel på hur systemmetriker kan visualiseras.</p>
+
+
+          <h4 class="text-lg font-medium text-sky-500 mt-4 mb-1">Logghantering – Min Bästa Vän</h4>
+          <ul class="list-disc list-inside text-neutral-600 space-y-1">
+            <li>Vikten av bra, kontextuella loggmeddelanden.</li>
+            <li>Strukturerad loggning (t.ex. JSON) för enklare parsning och sökning (t.ex. med ELK-stacken).</li>
+            <li>Centraliserade loggar för överblick.</li>
+          </ul>
+          <h4 class="text-lg font-medium text-sky-500 mt-3 mb-1">Spårning (Tracing)</h4>
+          <p class="text-neutral-600">Att kunna följa en enskild request/användarsession genom flera mikrotjänster är
+            ovärderligt för att förstå flöden och hitta problem.</p>
+        </div>
+
+        <div class="card">
+          <h3 class="text-xl font-semibold text-sky-600 mb-3">Verklighetens DevOps: Balansen</h3>
+          <p class="text-neutral-700 font-medium mb-2">Min observation: "Företag prioriterar ofta (av goda skäl!) att få
+            ut fungerande funktionalitet snabbt till användarna, snarare än att vänta på den 'perfekta' koden eller
+            konfigurationen."</p>
+          <h4 class="text-lg font-medium text-sky-500 mt-3 mb-1">Vad innebär det för oss?</h4>
+          <ul class="list-disc list-inside text-neutral-600 space-y-1">
+            <li><strong class="text-amber-600">Iterativ utveckling:</strong> Leverera värde i små steg, få feedback,
+              förbättra.</li>
+            <li><strong class="text-amber-600">MVP (Minimum Viable Product):</strong> Vad är det minsta vi kan bygga för
+              att testa en idé?</li>
+            <li><strong class="text-amber-600">Teknisk skuld:</strong> Ibland tar man medvetna genvägar. Viktigt att
+              vara medveten om det och ha en plan.</li>
+            <li><strong class="text-amber-600">"Good enough"</strong> är ibland precis det. Hitta rätt balans.</li>
+          </ul>
+          <p class="text-neutral-600 mt-3">Detta är en viktig diskussion. Hur ser ni på balansen mellan snabbhet och
+            perfektion i era projekt?</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="learning" class="content-section">
+      <h2 class="text-3xl font-semibold text-sky-700 mb-6">Lärande & Framtid</h2>
+      <p class="mb-6 text-lg text-neutral-700">DevOps är en resa av kontinuerligt lärande. Här reflekterar vi över
+        områden för vidare utforskning, vikten av nyfikenhet och hur ni som studenter kan bygga en stark grund för er
+        framtida karriär inom detta spännande och dynamiska fält.</p>
+
+      <div class="card mb-8">
+        <h3 class="text-xl font-semibold text-sky-600 mb-3">Områden Jag Själv Fortfarande Utforskar</h3>
+        <div class="grid md:grid-cols-3 gap-4">
+          <div class="p-3 border rounded-lg hover:shadow-md transition-shadow">
+            <h4 class="font-medium text-sky-500">Infrastructure as Code (IaC)</h4>
+            <p class="text-sm text-neutral-600">Konceptet: Definiera infrastruktur (servrar, nätverk) med kod (t.ex.
+              Terraform). Varför? Automatiserad, repeterbar och versionshanterad infrastruktur.</p>
+          </div>
+          <div class="p-3 border rounded-lg hover:shadow-md transition-shadow">
+            <h4 class="font-medium text-sky-500">Avancerad DevSecOps</h4>
+            <p class="text-sm text-neutral-600">Jag förstår grundprinciperna – bygga in säkerhet från start (Shift Left
+              Security) och automatisera säkerhetstester (SAST, DAST, SCA). Men att implementera det fullt ut är en hel
+              disciplin.</p>
+          </div>
+          <div class="p-3 border rounded-lg hover:shadow-md transition-shadow">
+            <h4 class="font-medium text-sky-500">Djupare Kubernetes-kunskap</h4>
+            <p class="text-sm text-neutral-600">Utöver att driftsätta en applikation; förstå nätverk, lagring och
+              avancerad konfiguration i K8s mer ingående.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid md:grid-cols-2 gap-6">
+        <div class="card">
+          <h3 class="text-xl font-semibold text-sky-600 mb-3">DevOps är en Ständig Resa</h3>
+          <p class="text-neutral-600 mb-2">Nya verktyg och tekniker dyker upp hela tiden. Det viktigaste är att vara
+            <strong class="text-amber-600">nyfiken</strong>, <strong class="text-amber-600">villig att lära</strong> och
+            att <strong class="text-amber-600">samarbeta</strong>.</p>
+          <p class="text-neutral-600">Fältet utvecklas, och det gör vi också!</p>
+        </div>
+        <div class="card">
+          <h3 class="text-xl font-semibold text-sky-600 mb-3">Vad Ni Kommer att Lära Er (och Redan Lär Er!)</h3>
+          <p class="text-neutral-600 mb-2">Ni får en bredare och djupare teoretisk grund än vad många som "ramlat in" i
+            DevOps har. Utnyttja det!</p>
+          <p class="text-neutral-600">Kombinera er teoretiska kunskap med praktiska övningar och projekt. Var inte rädda
+            för att experimentera och bygga saker – det är så man lär sig bäst.</p>
+        </div>
+      </div>
+      <div class="mt-10 text-center">
+        <h3 class="text-2xl font-semibold text-sky-700 mb-3">Frågor & Diskussion</h3>
+        <p class="text-lg text-neutral-700">Tack för att ni lyssnat! Nu är det er tur. Vilka tankar och frågor har detta
+          väckt? Vad är ni mest nyfikna på inom DevOps?</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="text-center py-8 mt-10 border-t border-neutral-300">
+    <p class="text-neutral-600">&copy; 2025 DevOps-Resan. Inspirerad av en utvecklares perspektiv.</p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const navButtons = document.querySelectorAll('.nav-item');
+      const contentSections = document.querySelectorAll('.content-section');
+      const mobileMenuButton = document.getElementById('mobile-menu-button');
+      const mobileMenu = document.getElementById('mobile-menu');
+
+      // Navigation
+      function setActiveSection(sectionId) {
+        contentSections.forEach(section => {
+          section.classList.remove('active');
+          if (section.id === sectionId) {
+            section.classList.add('active');
+          }
+        });
+        navButtons.forEach(button => {
+          button.classList.remove('active');
+          if (button.dataset.section === sectionId) {
+            button.classList.add('active');
+          }
+        });
+        // Close mobile menu after navigation
+        if (mobileMenu && !mobileMenu.classList.contains('hidden')) {
+          mobileMenu.classList.add('hidden');
+        }
+      }
+
+      navButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          setActiveSection(button.dataset.section);
+        });
+      });
+
+      // Mobile menu toggle
+      if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', () => {
+          mobileMenu.classList.toggle('hidden');
+        });
+      }
+
+      // Sub-navigation for Tools section
+      const toolsSubNavButtons = document.querySelectorAll('#tools-sub-nav .sub-nav-button');
+      const toolsSubContents = document.querySelectorAll('.tools-sub-content');
+
+      toolsSubNavButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          toolsSubNavButtons.forEach(btn => btn.classList.remove('active'));
+          button.classList.add('active');
+
+          const targetId = button.dataset.subtarget + '-sub';
+          toolsSubContents.forEach(content => {
+            content.classList.add('hidden');
+            if (content.id === targetId) {
+              content.classList.remove('hidden');
+            }
+          });
+        });
+      });
+
+      // Initialize with the first section active
+      setActiveSection('intro');
+
+      // Chart.js: Mock Metrics Chart
+      const metricsChartCtx = document.getElementById('metricsChart');
+      if (metricsChartCtx) {
+        // Function to wrap text for chart labels
+        function wrapText(text, maxWidthChars) {
+          const words = text.split(' ');
+          let lines = [];
+          let currentLine = words[0];
+
+          for (let i = 1; i < words.length; i++) {
+            if (currentLine.length + words[i].length + 1 < maxWidthChars) {
+              currentLine += ' ' + words[i];
+            } else {
+              lines.push(currentLine);
+              currentLine = words[i];
+            }
+          }
+          lines.push(currentLine);
+          return lines;
+        }
+
+        const data = {
+          labels: ['CPU Användning (%)', 'Minnesanvändning (GB)', 'Svarstid (ms)', 'Antal Fel (per timme)'].map(label => wrapText(label, 16)),
+          datasets: [{
+            label: 'System Metriker (Exempel)',
+            data: [65, 10.5, 120, 3], // Example data
+            backgroundColor: [
+              'rgba(54, 162, 235, 0.6)', // Blue
+              'rgba(255, 206, 86, 0.6)', // Yellow
+              'rgba(75, 192, 192, 0.6)', // Green
+              'rgba(255, 99, 132, 0.6)'  // Red
+            ],
+            borderColor: [
+              'rgba(54, 162, 235, 1)',
+              'rgba(255, 206, 86, 1)',
+              'rgba(75, 192, 192, 1)',
+              'rgba(255, 99, 132, 1)'
+            ],
+            borderWidth: 1
+          }]
+        };
+
+        new Chart(metricsChartCtx, {
+          type: 'bar',
+          data: data,
+          options: {
+            responsive: true,
+            maintainAspectRatio: false, // Important for container fitting
+            scales: {
+              y: {
+                beginAtZero: true,
+                title: {
+                  display: true,
+                  text: 'Värde'
+                }
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: 'Metrik'
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: 'top',
+              },
+              tooltip: {
+                enabled: true,
+                backgroundColor: 'rgba(0,0,0,0.7)',
+                titleFont: {
+                  weight: 'bold'
+                },
+                bodyFont: {
+                  size: 12
+                },
+                callbacks: {
+                  // Example: Custom tooltip title
+                  title: function (tooltipItems) {
+                    // tooltipItems is an array, for bar chart usually one item
+                    // For multiline labels, join them back
+                    if (tooltipItems[0] && Array.isArray(tooltipItems[0].label)) {
+                      return tooltipItems[0].label.join(' ');
+                    }
+                    return tooltipItems[0] ? tooltipItems[0].label : '';
+                  }
+                }
+              }
+            }
+          }
+        });
+      }
+    });
+  </script>
+</body>
+
+</html>
