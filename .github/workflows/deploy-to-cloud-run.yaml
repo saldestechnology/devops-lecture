@@ -1,100 +1,65 @@
 # Start of .github/workflows/deploy-to-cloud-run.yml
 
-# 0 spaces indentation: Workflow name
 name: Build and Deploy to Google Cloud Run
 
-# 0 spaces indentation: Trigger definition
 on:
-  # 2 spaces indentation: Event
   push:
-    # 4 spaces indentation: Event configuration
     branches:
-      # 6 spaces indentation: List item (branch name)
-      - main # Or your primary deployment branch
+      - main
 
-# 0 spaces indentation: Global environment variables for the workflow
 env:
-  # 2 spaces indentation: Environment variable definitions
-  GCP_REGION: europe-west4                  # TODO: Verify this is your GCP region
-  ARTIFACT_REGISTRY_REPO_NAME: my-devops-app-repo # TODO: Verify this is your Artifact Registry repo name
-  CLOUD_RUN_SERVICE_NAME: my-devops-service     # TODO: Verify this is your Cloud Run service name
-  IMAGE_NAME: my-gcp-devops-app             # TODO: Verify this is the base name for your Docker image
+  GCP_REGION: europe-west4
+  ARTIFACT_REGISTRY_REPO_NAME: my-devops-app-repo
+  CLOUD_RUN_SERVICE_NAME: my-devops-service
+  IMAGE_NAME: my-gcp-devops-app
 
-# 0 spaces indentation: Jobs definition
 jobs:
-  # 2 spaces indentation: Job ID
   build-and-deploy:
-    # 4 spaces indentation: Job display name
     name: Build and Deploy
-    # 4 spaces indentation: Runner type
     runs-on: ubuntu-latest
 
-    # 4 spaces indentation: Permissions for Workload Identity Federation
     permissions:
-      # 6 spaces indentation: Permission grants
       contents: 'read'
       id-token: 'write'
 
-    # 4 spaces indentation: Steps within the job
     steps:
-      # 6 spaces indentation: Start of a step (list item)
       - name: Checkout code
-        # 8 spaces indentation: Step properties
         uses: actions/checkout@v4
 
-      # 6 spaces indentation: Start of a step
       - name: Authenticate to Google Cloud
-        # 8 spaces indentation: Step properties
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          # 10 spaces indentation: 'with' arguments
           workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
           service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
 
-      # 6 spaces indentation: Start of a step
       - name: Set up Cloud SDK
-        # 8 spaces indentation: Step properties
         uses: google-github-actions/setup-gcloud@v2
         with:
-          # 10 spaces indentation: 'with' arguments
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # 6 spaces indentation: Start of a step
       - name: Configure Docker for Artifact Registry
         # 8 spaces indentation: Step properties
         run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
 
-      # 6 spaces indentation: Start of a step
       - name: Build Docker image
-        # 8 spaces indentation: Step properties (local env for this step)
         env:
-          # 10 spaces indentation: Env var for this step
           IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        # 8 spaces indentation: 'run' command
         run: |
           # 10 spaces indentation: Start of multi-line script content
           docker build \
             --build-arg APP_VERSION_ARG=${{ github.sha }} \
             -t $IMAGE_TAG \
-            .
 
-      # 6 spaces indentation: Start of a step
       - name: Push Docker image to Artifact Registry
-        # 8 spaces indentation: Step properties (local env for this step)
         env:
-          # 10 spaces indentation: Env var for this step
           IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
-        # 8 spaces indentation: 'run' command
-        run: docker push $IMAGE_TAG
 
-      # 6 spaces indentation: Start of a step
+        run: docker push $IMAGE_TAG
       - name: Deploy to Cloud Run
-        # 8 spaces indentation: Step properties
         id: deploy
         uses: google-github-actions/deploy-cloudrun@v2
         with:
-          # 10 spaces indentation: 'with' arguments
           service: ${{ env.CLOUD_RUN_SERVICE_NAME }}
           region: ${{ env.GCP_REGION }}
           image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
@@ -103,10 +68,6 @@ jobs:
             APP_VERSION=${{ github.sha }}
             LOG_LEVEL=info
             NODE_ENV=production
-          # 10 spaces indentation: Optional flags (if uncommented, must align with 'service', 'region', etc.)
-          # flags: --allow-unauthenticated
-
-      # 6 spaces indentation: Start of a step
       - name: Show Cloud Run Service URL
         # 8 spaces indentation: Step properties
         if: steps.deploy.outputs.url
