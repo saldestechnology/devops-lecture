@@ -1,0 +1,75 @@
+name: Build and Deploy to Google Cloud Run
+
+on:
+  push:
+    branches:
+      - main # Or your default branch, e.g., master
+
+env:
+  GCP_REGION: europe-west4 # Your GCP region (e.g., where Artifact Registry & Cloud Run are)
+  ARTIFACT_REGISTRY_REPO_NAME: my-devops-app-repo # Your Artifact Registry repository name
+  CLOUD_RUN_SERVICE_NAME: my-devops-service # Your Cloud Run service name
+  IMAGE_NAME: my-gcp-devops-app # The name of your application/image
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    # Grant permissions for Workload Identity Federation
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ env.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build Docker image
+        env:
+          # Use the commit SHA for a unique image tag
+          IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: |
+          docker build \
+            --build-arg APP_VERSION_ARG=${{ github.sha }} \
+            -t $IMAGE_TAG \
+            .
+
+      - name: Push Docker image to Artifact Registry
+        env:
+          IMAGE_TAG: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        run: docker push $IMAGE_TAG
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v2
+        with:
+          service: ${{ env.CLOUD_RUN_SERVICE_NAME }}
+          region: ${{ env.GCP_REGION }}
+          # Deploy the image pushed in the previous step
+          image: ${{ env.GCP_REGION }}-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID }}/${{ env.ARTIFACT_REGISTRY_REPO_NAME }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          env_vars: | # Add environment variables for your Cloud Run service
+            APP_VERSION=${{ github.sha }}
+            LOG_LEVEL=info
+            NODE_ENV=production
+          # flags: --allow-unauthenticated # Uncomment if your service should be public
+
+      - name: Show Cloud Run Service URL
+        if: steps.deploy.outputs.url
+        run: echo "Service URL: ${{ steps.deploy.outputs.url }}"
+        
